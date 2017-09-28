@@ -309,8 +309,8 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
   }
 
   this->ui->view1->show();
-//  this->ui->view2->show();
-//  this->ui->view3->show();
+  this->ui->view2->show();
+  this->ui->view3->show();
 
   // Set up action signals and slots
   connect(this->ui->actionExit, SIGNAL(triggered()), this, SLOT(slotExit()));
