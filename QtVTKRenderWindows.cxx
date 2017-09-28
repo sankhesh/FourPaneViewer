@@ -66,7 +66,6 @@ public:
       vtkInteractorStyleImage* style =
         dynamic_cast<vtkInteractorStyleImage*> (caller);
       vtkResliceImageViewer* riw = nullptr;
-      vtkImagePlaneWidget* ipw = nullptr;
       if (style)
       {
         // Figure out the current viewer
@@ -77,90 +76,22 @@ public:
           {
             riw = RIW[i];
             ca = CA[i];
-            ipw = IPW[i];
             break;
           }
         }
 
-        if (ipw)
+        if (riw)
         {
-//          // Get event position in display coordinates
-//          // Get event position in display coordinates
-//          int * eventPos = style->GetInteractor()->GetEventPosition();
-//          vtkRenderer* curRen =
-//            style->GetInteractor()->FindPokedRenderer(eventPos[0], eventPos[1]);
-//
-//          // Get the world point in the reslice coordinate system
-//          double worldPtReslice[4];
-//          curRen->SetDisplayPoint(eventPos[0], eventPos[1], 0);
-//          curRen->DisplayToWorld();
-//          curRen->GetWorldPoint(worldPtReslice);
-//
-//          // Since this is a planar point on the image
-//          worldPtReslice[2] = 0;
-//
-//          // Convert to IJK coordinates in reslice space
-//          double resliceOrigin[3], resliceSpacing[3];
-//          int resliceExtent[6];
-//          ipw->GetResliceOutput()->GetOrigin(resliceOrigin);
-//          ipw->GetResliceOutput()->GetSpacing(resliceSpacing);
-//          ipw->GetResliceOutput()->GetExtent(resliceExtent);
-//          int resliceIJK[4];
-//          resliceIJK[2] = resliceExtent[4];
-//          resliceIJK[3] = 1;
-//          for (int j = 0; j < 2; ++j)
-//          {
-//            resliceIJK[j] = static_cast<int>(
-//                              (worldPtReslice[j] - resliceOrigin[j]) /
-//                              resliceSpacing[j]);
-//            resliceIJK[j] = resliceIJK[j] < resliceExtent[2*j] ?
-//                            resliceExtent[2*j] : resliceIJK[j];
-//            resliceIJK[j] = resliceIJK[j] > resliceExtent[2*j + 1] ?
-//                            resliceExtent[2*j + 1] : resliceIJK[j];
-//          }
-//        }
-//        // Convert from the resliceIJK to original data IJK
-//        vtkImageReslice* reslice = ipw->GetReslice();
-//        vtkTransform* t = vtkTransform::SafeDownCast(reslice->GetResliceTransform());
-//        vtkMatrix4x4* m = reslice->GetResliceAxes();
-//        int dataIJK[4];
-//        dataIJK = t->PostM
-//        if (riw)
-//        {
-//          // Get the reslice axes matrix
-//          vtkResliceCursorRepresentation* rep =
-//            vtkResliceCursorLineRepresentation::SafeDownCast(
-//              riw->GetResliceCursorWidget()->GetResliceCursorRepresentation());
-          vtkMatrix4x4* resliceMatrix = ipw->GetResliceAxes();
-          vtkMatrix4x4* invResliceMat = vtkMatrix4x4::New();
-          invResliceMat->DeepCopy(resliceMatrix);
-          invResliceMat->SetElement(0, 3, 0);
-          invResliceMat->SetElement(1, 3, 0);
-          invResliceMat->SetElement(2, 3, 0);
-          invResliceMat->SetElement(3, 3, 1);
-          invResliceMat->Invert();
-          invResliceMat->PrintSelf(std::cout, vtkIndent());
-
           // Get event position in display coordinates
           int * eventPos = style->GetInteractor()->GetEventPosition();
           vtkRenderer* curRen =
             style->GetInteractor()->FindPokedRenderer(eventPos[0], eventPos[1]);
-
-          std::cout << "Event Pos: ("<< eventPos[0] << ", " << eventPos[1] << ")" << std::endl;
 
           // Get the world point in the reslice coordinate system
           double worldPtReslice[4];
           curRen->SetDisplayPoint(eventPos[0], eventPos[1], 0);
           curRen->DisplayToWorld();
           curRen->GetWorldPoint(worldPtReslice);
-          //worldPtReslice[2] = 0.0;
-          std::cout << "worldPtReslice: ("<< worldPtReslice[0] << ", " << worldPtReslice[1] << ", " << worldPtReslice[2] << ")" << std::endl;
-
-          // get the point in the volume coordinate system
-          //double worldPtVolume[4];
-          double * worldPtVolume = worldPtReslice;
-          //invResliceMat->MultiplyPoint(worldPtReslice, worldPtVolume);
-          std::cout << "worldPtVolume: ("<< worldPtVolume[0] << ", " << worldPtVolume[1] << ", " << worldPtVolume[2] << ")" << std::endl;
 
           // Get the (i,j,k) indices of the point in the original data
           double origin[3], spacing[3];
@@ -171,15 +102,11 @@ public:
           data->GetExtent(extent);
           for (int j = 0; j < 3; ++j)
           {
-            pt[j] = static_cast<int>((worldPtVolume[j] - origin[j])/spacing[j]);
+            pt[j] = static_cast<int>((worldPtReslice[j] - origin[j])/spacing[j]);
             pt[j] = pt[j] < extent[2*j] ? extent[2*j] : pt[j];
             pt[j] = pt[j] >= extent[2*j+1] ? extent[2*j+1] - 1 : pt[j];
           }
           short * val = static_cast<short*> (data->GetScalarPointer(pt));
-          std::cout << "Data extent: " << extent[0] << " " << extent[1] <<
-            " " << extent[2] << " " << extent[3] << " " <<
-            extent[4] << " " << extent[5] << std::endl;
-          std::cout << pt[0] << " " << pt[1] << " " << pt[2] << " " << val[0] << std::endl;
 
           std::ostringstream annotation;
           annotation << "(" << pt[0] << ", "<< pt[1] << ", " << pt[2] <<
