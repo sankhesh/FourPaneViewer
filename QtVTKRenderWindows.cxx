@@ -46,7 +46,6 @@ public:
   void Execute( vtkObject *caller, unsigned long ev,
                 void *callData )
   {
-
     if (ev == vtkResliceCursorWidget::WindowLevelEvent ||
         ev == vtkCommand::WindowLevelEvent ||
         ev == vtkResliceCursorWidget::ResliceThicknessChangedEvent)
@@ -87,11 +86,9 @@ public:
           vtkRenderer* curRen =
             style->GetInteractor()->FindPokedRenderer(eventPos[0], eventPos[1]);
 
-          // Get the world point in the reslice coordinate system
-          double worldPtReslice[4];
-          curRen->SetDisplayPoint(eventPos[0], eventPos[1], 0);
-          curRen->DisplayToWorld();
-          curRen->GetWorldPoint(worldPtReslice);
+          vtkNew<vtkCellPicker> cellPicker;
+          cellPicker->Pick(eventPos[0], eventPos[1], 0, curRen);
+          double* worldPtReslice = cellPicker->GetPickPosition();
 
           // Get the (i,j,k) indices of the point in the original data
           double origin[3], spacing[3];
@@ -104,7 +101,7 @@ public:
           {
             pt[j] = static_cast<int>((worldPtReslice[j] - origin[j])/spacing[j]);
             pt[j] = pt[j] < extent[2*j] ? extent[2*j] : pt[j];
-            pt[j] = pt[j] >= extent[2*j+1] ? extent[2*j+1] - 1 : pt[j];
+            pt[j] = pt[j] > extent[2*j+1] ? extent[2*j+1] : pt[j];
           }
           short * val = static_cast<short*> (data->GetScalarPointer(pt));
 
@@ -265,6 +262,7 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
     planeWidget[i]->SetInputConnection(reader->GetOutputPort());
     planeWidget[i]->SetPlaneOrientation(i);
     planeWidget[i]->SetSliceIndex(imageDims[i]/2);
+    riw[i]->SetSlice(imageDims[i]/2);
     planeWidget[i]->DisplayTextOn();
     planeWidget[i]->SetDefaultRenderer(ren);
     planeWidget[i]->SetWindowLevel(1358, -27);
