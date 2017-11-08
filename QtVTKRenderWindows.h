@@ -46,6 +46,7 @@ protected:
 protected slots:
   void record();
   void play();
+  void screenshot();
 
 private:
 

@@ -40,6 +40,11 @@
 #include <pqTestUtility.h>
 
 #include <QFileDialog>
+#include <QDir>
+#include <QPixmap>
+#include <QString>
+#include <QMessageBox>
+#include <QPropertyAnimation>
 
 #include <sstream>
 
@@ -196,6 +201,8 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
 
   QObject::connect(ui->actionRecord, SIGNAL(triggered()), this, SLOT(record()));
   QObject::connect(ui->actionPlay, SIGNAL(triggered()), this, SLOT(play()));
+  QObject::connect(
+    ui->pushButton_Screenshot, SIGNAL(clicked()), this, SLOT(screenshot()));
 
   this->TestUtility = new pqTestUtility(this);
   this->TestUtility->addEventObserver("xml", new QtVTKXMLEventObserver(this));
@@ -495,5 +502,28 @@ void QtVTKRenderWindows::play()
   if (!filename.isEmpty())
     {
     this->TestUtility->playTests(filename);
+    }
+}
+
+void QtVTKRenderWindows::screenshot()
+{
+  const QDateTime now = QDateTime::currentDateTime();
+  const QString timestamp = now.toString(QLatin1String("yyyyMMdd-hhmmsszzz"));
+  const QString filename =
+    QString::fromLatin1("Screenshot-%1.png").arg(timestamp);
+  QPropertyAnimation* fadeInAnimation =
+    new QPropertyAnimation(this, "windowOpacity");
+  fadeInAnimation->setDuration(50);
+  fadeInAnimation->setStartValue(0.0);
+  fadeInAnimation->setEndValue(1.0);
+  fadeInAnimation->start();
+  QApplication::beep();
+  QPixmap pm = this->grab();
+  if (!pm.save(filename))
+    {
+      QMessageBox::warning(this,
+                           tr("Screenshot error"),
+                           tr("Image \"%1\" could not be saved.")
+                             .arg(QDir::toNativeSeparators(filename)));
     }
 }

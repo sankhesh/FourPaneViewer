@@ -140,6 +140,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_Screenshot">
+            <property name="text">
+             <string>Screenshot (Ctrl / Cmd + S)</string>
+            </property>
+            <property name="shortcut">
+             <string>Ctrl+S</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
