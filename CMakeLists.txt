@@ -18,6 +18,7 @@ find_package(VTK COMPONENTS
 )
 include(${VTK_USE_FILE})
 
+find_package(QtTesting REQUIRED)
 
 if("${VTK_QT_VERSION}" STREQUAL "")
   message(FATAL_ERROR "VTK was not built with Qt")
@@ -35,6 +36,7 @@ set( UIs QtVTKRenderWindows.ui )
 include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${QtTesting_INCLUDE_DIRS}
 )
 
 # Instruct CMake to run moc automatically when needed.
@@ -47,7 +49,9 @@ if(VTK_QT_VERSION VERSION_GREATER "4")
   # CMAKE_AUTOMOC in ON so the MocHdrs will be automatically wrapped.
   add_executable(QtVTKRenderWindows ${Srcs} ${Hdrs} ${UI_Srcs} ${MOC_Hdrs})
   qt5_use_modules(QtVTKRenderWindows Core Gui Widgets)
-  target_link_libraries(QtVTKRenderWindows ${VTK_LIBRARIES})
+  target_link_libraries(QtVTKRenderWindows
+    ${VTK_LIBRARIES}
+    ${QtTesting_LIBRARIES})
 else()
   find_package(Qt4 REQUIRED)
   include(${QT_USE_FILE})
@@ -58,5 +62,7 @@ else()
   qt4_wrap_ui(UI_Srcs ${UIs})
 
   add_executable(QtVTKRenderWindows ${Srcs} ${Hdrs} ${UI_Srcs} ${MOC_Hdrs})
-  target_link_libraries(QtVTKRenderWindows ${QT_LIBRARIES} ${VTK_LIBRARIES})
+  target_link_libraries(QtVTKRenderWindows ${QT_LIBRARIES}
+    ${VTK_LIBRARIES}
+    ${QtTesting_LIBRARIES})
 endif()

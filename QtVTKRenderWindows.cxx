@@ -1,38 +1,45 @@
 #include "ui_QtVTKRenderWindows.h"
 #include "QtVTKRenderWindows.h"
+#include "QtVTKXMLEventSource.h"
+#include "QtVTKXMLEventObserver.h"
 
-#include "vtkBoundedPlanePointPlacer.h"
-#include "vtkCellPicker.h"
-#include "vtkCommand.h"
-#include "vtkCornerAnnotation.h"
-#include "vtkDICOMImageReader.h"
-#include "vtkDistanceRepresentation.h"
-#include "vtkDistanceRepresentation2D.h"
-#include "vtkDistanceWidget.h"
-#include "vtkHandleRepresentation.h"
-#include "vtkImageData.h"
-#include "vtkImageMapToWindowLevelColors.h"
-#include "vtkImageSlabReslice.h"
-#include "vtkInteractorStyleImage.h"
-#include "vtkLookupTable.h"
-#include "vtkMatrix4x4.h"
-#include "vtkPlane.h"
-#include "vtkPlaneSource.h"
-#include "vtkPointHandleRepresentation2D.h"
-#include "vtkPointHandleRepresentation3D.h"
-#include "vtkProperty.h"
-#include "vtkResliceCursor.h"
-#include "vtkResliceCursorActor.h"
-#include "vtkResliceCursorLineRepresentation.h"
-#include "vtkResliceCursorPolyDataAlgorithm.h"
-#include "vtkResliceCursorThickLineRepresentation.h"
-#include "vtkResliceCursorWidget.h"
-#include "vtkResliceImageViewer.h"
-#include "vtkResliceImageViewerMeasurements.h"
-#include "vtkTextProperty.h"
-#include "vtkTransform.h"
+#include <vtkBoundedPlanePointPlacer.h>
+#include <vtkCellPicker.h>
+#include <vtkCommand.h>
+#include <vtkCornerAnnotation.h>
+#include <vtkDICOMImageReader.h>
+#include <vtkDistanceRepresentation.h>
+#include <vtkDistanceRepresentation2D.h>
+#include <vtkDistanceWidget.h>
+#include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkHandleRepresentation.h>
+#include <vtkImageData.h>
+#include <vtkImageMapToWindowLevelColors.h>
+#include <vtkImageSlabReslice.h>
+#include <vtkInteractorStyleImage.h>
+#include <vtkLookupTable.h>
+#include <vtkMatrix4x4.h>
+#include <vtkPlane.h>
+#include <vtkPlaneSource.h>
+#include <vtkPointHandleRepresentation2D.h>
+#include <vtkPointHandleRepresentation3D.h>
+#include <vtkProperty.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderer.h>
+#include <vtkResliceCursor.h>
+#include <vtkResliceCursorActor.h>
+#include <vtkResliceCursorLineRepresentation.h>
+#include <vtkResliceCursorPolyDataAlgorithm.h>
+#include <vtkResliceCursorThickLineRepresentation.h>
+#include <vtkResliceCursorWidget.h>
+#include <vtkResliceImageViewer.h>
+#include <vtkResliceImageViewerMeasurements.h>
+#include <vtkTextProperty.h>
+#include <vtkTransform.h>
+
+#include <pqTestUtility.h>
+
+#include <QFileDialog>
 
 #include <sstream>
 
@@ -187,6 +194,13 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
   this->ui = new Ui_QtVTKRenderWindows;
   this->ui->setupUi(this);
 
+  QObject::connect(ui->actionRecord, SIGNAL(triggered()), this, SLOT(record()));
+  QObject::connect(ui->actionPlay, SIGNAL(triggered()), this, SLOT(play()));
+
+  this->TestUtility = new pqTestUtility(this);
+  this->TestUtility->addEventObserver("xml", new QtVTKXMLEventObserver(this));
+  this->TestUtility->addEventSource("xml", new QtVTKXMLEventSource(this));
+
   vtkSmartPointer< vtkDICOMImageReader > reader =
     vtkSmartPointer< vtkDICOMImageReader >::New();
   reader->SetDirectoryName(argv[1]);
@@ -198,7 +212,11 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
   for (int i = 0; i < 3; i++)
   {
     riw[i] = vtkSmartPointer< vtkResliceImageViewer >::New();
+    vtkSmartPointer<vtkGenericOpenGLRenderWindow> window =
+      vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+    riw[i]->SetRenderWindow(window);
   }
+
 
   this->ui->view1->SetRenderWindow(riw[0]->GetRenderWindow());
   riw[0]->SetupInteractor(
@@ -238,7 +256,10 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
   vtkSmartPointer< vtkRenderer > ren =
     vtkSmartPointer< vtkRenderer >::New();
 
-  this->ui->view4->GetRenderWindow()->AddRenderer(ren);
+  vtkSmartPointer<vtkGenericOpenGLRenderWindow> window =
+    vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+  this->ui->view4->SetRenderWindow(window);
+  window->AddRenderer(ren);
   vtkRenderWindowInteractor *iren = this->ui->view4->GetInteractor();
 
   for (int i = 0; i < 3; i++)
@@ -454,4 +475,25 @@ void QtVTKRenderWindows::AddDistanceMeasurementToView(int i)
 
   this->DistanceWidget[i]->CreateDefaultRepresentation();
   this->DistanceWidget[i]->EnabledOn();
+}
+
+void QtVTKRenderWindows::record()
+{
+  QString filename = QFileDialog::getSaveFileName (this, "Test File Name",
+    QString(), "XML Files (*.xml)");
+  if (!filename.isEmpty())
+    {
+    QApplication::setActiveWindow(this);
+    this->TestUtility->recordTests(filename);
+    }
+}
+
+void QtVTKRenderWindows::play()
+{
+  QString filename = QFileDialog::getOpenFileName (this, "Test File Name",
+    QString(), "XML Files (*.xml)");
+  if (!filename.isEmpty())
+    {
+    this->TestUtility->playTests(filename);
+    }
 }

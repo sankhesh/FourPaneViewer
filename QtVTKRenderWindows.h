@@ -10,6 +10,7 @@
 
 // Forward Qt class declarations
 class Ui_QtVTKRenderWindows;
+class pqTestUtility;
 
 class QtVTKRenderWindows : public QMainWindow
 {
@@ -40,7 +41,11 @@ protected:
   vtkSmartPointer< vtkDistanceWidget > DistanceWidget[3];
   vtkSmartPointer< vtkResliceImageViewerMeasurements > ResliceMeasurements;
 
+  pqTestUtility* TestUtility;
+
 protected slots:
+  void record();
+  void play();
 
 private:
 
