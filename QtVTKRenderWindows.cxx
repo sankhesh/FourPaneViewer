@@ -207,6 +207,7 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
     ui->pushButton_Screenshot, SIGNAL(clicked()), this, SLOT(screenshot()));
 
   this->TestUtility = new pqTestUtility(this);
+  this->TestUtility->setRecordWithDialog(true);
   this->TestUtility->addEventObserver("xml", new QtVTKXMLEventObserver(this));
   this->TestUtility->addEventSource("xml", new QtVTKXMLEventSource(this));
   QtVTKHotKeyEventTranslator* t = new QtVTKHotKeyEventTranslator(this);
