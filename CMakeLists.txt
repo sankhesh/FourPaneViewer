@@ -25,11 +25,14 @@ if("${VTK_QT_VERSION}" STREQUAL "")
 endif()
 
 # Set your files and resources here
-set( Srcs QtVTKRenderWindowsApp.cxx QtVTKRenderWindows.cxx)
+set( Srcs QtVTKRenderWindowsApp.cxx QtVTKRenderWindows.cxx
+  QtVTKHotKeyEventTranslator.cxx QtVTKHotKeyEventPlayer.cxx)
 
-set( Hdrs QtVTKRenderWindows.h )
+set( Hdrs QtVTKRenderWindows.h  QtVTKHotKeyEventTranslator.h
+  QtVTKHotKeyEventPlayer.h)
 
-set( MOC_Hdrs QtVTKRenderWindows.h )
+set( MOC_Hdrs QtVTKRenderWindows.h QtVTKHotKeyEventTranslator.h
+  QtVTKHotKeyEventPlayer.h)
 
 set( UIs QtVTKRenderWindows.ui )
 

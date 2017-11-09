@@ -2,6 +2,8 @@
 #include "QtVTKRenderWindows.h"
 #include "QtVTKXMLEventSource.h"
 #include "QtVTKXMLEventObserver.h"
+#include "QtVTKHotKeyEventTranslator.h"
+#include "QtVTKHotKeyEventPlayer.h"
 
 #include <vtkBoundedPlanePointPlacer.h>
 #include <vtkCellPicker.h>
@@ -207,6 +209,14 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
   this->TestUtility = new pqTestUtility(this);
   this->TestUtility->addEventObserver("xml", new QtVTKXMLEventObserver(this));
   this->TestUtility->addEventSource("xml", new QtVTKXMLEventSource(this));
+  QtVTKHotKeyEventTranslator* t = new QtVTKHotKeyEventTranslator(this);
+  this->TestUtility->eventTranslator()->addWidgetEventTranslator(t);
+  this->TestUtility->eventTranslator()->removeWidgetEventTranslator(
+    "pqBasicWidgetEventTranslator");
+  QtVTKHotKeyEventPlayer* p = new QtVTKHotKeyEventPlayer(this);
+  this->TestUtility->eventPlayer()->addWidgetEventPlayer(p);
+  this->TestUtility->eventPlayer()->removeWidgetEventPlayer(
+    "pqBasicWidgetEventPlayer");
 
   vtkSmartPointer< vtkDICOMImageReader > reader =
     vtkSmartPointer< vtkDICOMImageReader >::New();
