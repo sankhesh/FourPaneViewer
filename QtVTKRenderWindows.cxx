@@ -71,6 +71,28 @@ public:
       return;
     }
 
+    for (int i = 0; i < 3; i++)
+    {
+      vtkPlaneSource *ps = static_cast< vtkPlaneSource * >(
+          this->IPW[i]->GetPolyDataAlgorithm());
+      ps->SetOrigin(this->RCW[i]->GetResliceCursorRepresentation()->
+                                        GetPlaneSource()->GetOrigin());
+      ps->SetPoint1(this->RCW[i]->GetResliceCursorRepresentation()->
+                                        GetPlaneSource()->GetPoint1());
+      ps->SetPoint2(this->RCW[i]->GetResliceCursorRepresentation()->
+                                        GetPlaneSource()->GetPoint2());
+
+      // If the reslice plane has modified, update it on the 3D widget
+      this->IPW[i]->UpdatePlacement();
+    }
+
+    // Render everything
+    for (int i = 0; i < 3; i++)
+    {
+      this->RCW[i]->Render();
+    }
+    this->IPW[0]->GetInteractor()->GetRenderWindow()->Render();
+
     if (ev == vtkCommand::MouseMoveEvent)
     {
       // Get the event position from the interactor
@@ -102,6 +124,10 @@ public:
           cellPicker->Pick(eventPos[0], eventPos[1], 0, curRen);
           double* worldPtReslice = cellPicker->GetPickPosition();
 
+          vtkIdType ptId = data->FindPoint(worldPtReslice);
+          double closestPt[3];
+          data->GetPoint(ptId,closestPt);
+
           // Get the (i,j,k) indices of the point in the original data
           double origin[3], spacing[3];
           data->GetOrigin(origin);
@@ -109,12 +135,23 @@ public:
           int pt[3];
           int extent[6];
           data->GetExtent(extent);
-          for (int j = 0; j < 3; ++j)
+
+          int iq[3];
+          int iqtemp;
+          for (int i = 0; i < 3; i++)
           {
-            pt[j] = static_cast<int>((worldPtReslice[j] - origin[j])/spacing[j]);
-            pt[j] = pt[j] < extent[2*j] ? extent[2*j] : pt[j];
-            pt[j] = pt[j] > extent[2*j+1] ? extent[2*j+1] : pt[j];
+          // compute world to image coords
+            iqtemp = vtkMath::Round((closestPt[i]-origin[i])/spacing[i]);
+
+          // we have a valid pick already, just enforce bounds check
+            iq[i] = (iqtemp < extent[2*i])?extent[2*i]:((iqtemp > extent[2*i+1])?extent[2*i+1]:iqtemp);
+
+          // compute image to world coords
+            worldPtReslice[i] = iq[i]*spacing[i] + origin[i];
+
+            pt[i] = iq[i];
           }
+
           short * val = static_cast<short*> (data->GetScalarPointer(pt));
 
           std::ostringstream annotation;
@@ -126,7 +163,6 @@ public:
 
       style->OnMouseMove();
       }
-    return;
     }
 
     vtkImagePlaneWidget* ipw =
@@ -152,37 +188,6 @@ public:
       }
     }
 
-    vtkResliceCursorWidget *rcw = dynamic_cast<
-      vtkResliceCursorWidget * >(caller);
-    if (rcw)
-    {
-      vtkResliceCursorLineRepresentation *rep = dynamic_cast<
-        vtkResliceCursorLineRepresentation * >(rcw->GetRepresentation());
-      // Although the return value is not used, we keep the get calls
-      // in case they had side-effects
-      rep->GetResliceCursorActor()->GetCursorAlgorithm()->GetResliceCursor();
-      for (int i = 0; i < 3; i++)
-      {
-        vtkPlaneSource *ps = static_cast< vtkPlaneSource * >(
-            this->IPW[i]->GetPolyDataAlgorithm());
-        ps->SetOrigin(this->RCW[i]->GetResliceCursorRepresentation()->
-                                          GetPlaneSource()->GetOrigin());
-        ps->SetPoint1(this->RCW[i]->GetResliceCursorRepresentation()->
-                                          GetPlaneSource()->GetPoint1());
-        ps->SetPoint2(this->RCW[i]->GetResliceCursorRepresentation()->
-                                          GetPlaneSource()->GetPoint2());
-
-        // If the reslice plane has modified, update it on the 3D widget
-        this->IPW[i]->UpdatePlacement();
-      }
-    }
-
-    // Render everything
-    for (int i = 0; i < 3; i++)
-    {
-      this->RCW[i]->Render();
-    }
-    this->IPW[0]->GetInteractor()->GetRenderWindow()->Render();
   }
 
   vtkResliceCursorCallback() {}
