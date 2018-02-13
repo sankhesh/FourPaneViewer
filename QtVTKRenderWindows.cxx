@@ -36,6 +36,9 @@
 #include <vtkResliceImageViewerMeasurements.h>
 #include <vtkTextProperty.h>
 #include <vtkTransform.h>
+#include <vtkCamera.h>
+#include <vtkImageActor.h>
+#include <vtkResliceCursor.h>
 
 #include <pqTestUtility.h>
 
@@ -121,12 +124,12 @@ public:
             style->GetInteractor()->FindPokedRenderer(eventPos[0], eventPos[1]);
 
           vtkNew<vtkCellPicker> cellPicker;
+          cellPicker->SetTolerance(0.005);
+          cellPicker->AddPickList(riw->GetImageActor());
+          cellPicker->PickFromListOn();
           cellPicker->Pick(eventPos[0], eventPos[1], 0, curRen);
           double* worldPtReslice = cellPicker->GetPickPosition();
-
-          vtkIdType ptId = data->FindPoint(worldPtReslice);
-          double closestPt[3];
-          data->GetPoint(ptId,closestPt);
+          std::cout << "worldPtReslice " << worldPtReslice[0] << " " << worldPtReslice[1] << " " << worldPtReslice[2] << std::endl;
 
           // Get the (i,j,k) indices of the point in the original data
           double origin[3], spacing[3];
@@ -141,13 +144,10 @@ public:
           for (int i = 0; i < 3; i++)
           {
           // compute world to image coords
-            iqtemp = vtkMath::Round((closestPt[i]-origin[i])/spacing[i]);
+            iqtemp = vtkMath::Round((worldPtReslice[i]-origin[i])/spacing[i]);
 
           // we have a valid pick already, just enforce bounds check
             iq[i] = (iqtemp < extent[2*i])?extent[2*i]:((iqtemp > extent[2*i+1])?extent[2*i+1]:iqtemp);
-
-          // compute image to world coords
-            worldPtReslice[i] = iq[i]*spacing[i] + origin[i];
 
             pt[i] = iq[i];
           }
@@ -157,6 +157,8 @@ public:
           std::ostringstream annotation;
           annotation << "(" << pt[0] << ", "<< pt[1] << ", " << pt[2] <<
             ") "  << val[0];
+          std::cout << "(" << pt[0] << ", "<< pt[1] << ", " << pt[2] <<
+            ") "  << val[0] << std::endl;
           ca->SetText(0, annotation.str().c_str());
           riw->Render();
         }
@@ -220,7 +222,6 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
   int imageDims[3];
   reader->GetOutput()->GetDimensions(imageDims);
 
-
   for (int i = 0; i < 3; i++)
   {
     riw[i] = vtkSmartPointer< vtkResliceImageViewer >::New();
@@ -228,7 +229,6 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
       vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
     riw[i]->SetRenderWindow(window);
   }
-
 
   this->ui->view1->SetRenderWindow(riw[0]->GetRenderWindow());
   riw[0]->SetupInteractor(
@@ -303,6 +303,16 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
     planeWidget[i]->InteractionOn();
   }
 
+  // HACK: equalize the data spacing in X and Y - otherwise leads to rounding
+  // off errors when transforming from world to image IJK coordinates.
+  vtkImageData* data = reader->GetOutput();
+  double spacing[3];
+  data->GetSpacing(spacing);
+  if (std::fabs(spacing[0] - spacing[1]) < 1e-5)
+  {
+    spacing[1] = spacing[0];
+    data->SetSpacing(spacing);
+  }
   vtkSmartPointer<vtkResliceCursorCallback> cbk =
     vtkSmartPointer<vtkResliceCursorCallback>::New();
   cbk->data = reader->GetOutput();
@@ -372,8 +382,10 @@ void QtVTKRenderWindows::resliceMode(int mode)
 
   for (int i = 0; i < 3; i++)
   {
+    double ps = riw[i]->GetRenderer()->GetActiveCamera()->GetParallelScale();
     riw[i]->SetResliceMode(mode ? 1 : 0);
     riw[i]->GetRenderer()->ResetCamera();
+    riw[i]->GetRenderer()->GetActiveCamera()->SetParallelScale(ps);
     riw[i]->Render();
   }
 }
